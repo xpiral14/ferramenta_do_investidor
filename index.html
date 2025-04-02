@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Super Ferramenta Renda Fixa</title>
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Estilo adicional mínimo */
+        .tab-link.active {
+            border-color: #3b82f6; /* blue-500 */
+            color: #2563eb; /* blue-600 */
+            font-weight: 600;
+            background-color: #eff6ff; /* blue-50 */
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        #projectionChartContainer { position: relative; height: 400px; width: 100%; margin-top: 1.5rem; }
+        /* Sticky header for projection table */
+        #projection-table thead th { position: sticky; top: 0; z-index: 10; }
+         /* Subtle highlight for best row */
+        #comparison-results-table tbody tr.highlight-best { background-color: #f0fdf4; /* green-50 */ }
+        /* Custom scrollbar (optional, webkit only) */
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px;}
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; /* cool-gray-300 */ border-radius: 10px;}
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; /* cool-gray-400 */ }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans leading-normal">
+    <div class="container mx-auto p-4 md:p-8 bg-white rounded-lg shadow-lg my-8 max-w-7xl">
+        <h1 class="text-3xl font-bold text-center text-blue-700 mb-8">Super Ferramenta Renda Fixa</h1>
+
+        <!-- Tabs Navigation -->
+        <div class="flex flex-wrap border-b border-gray-300 mb-6">
+            <div class="tab-link active py-2 px-5 cursor-pointer text-gray-600 hover:text-blue-600 border-b-2 border-transparent -mb-px rounded-t-md" data-tab="comparador">Comparador</div>
+            <div class="tab-link py-2 px-5 cursor-pointer text-gray-600 hover:text-blue-600 border-b-2 border-transparent -mb-px rounded-t-md" data-tab="projetor">Projetor</div>
+            <div class="tab-link py-2 px-5 cursor-pointer text-gray-600 hover:text-blue-600 border-b-2 border-transparent -mb-px rounded-t-md" data-tab="inflacao">Calculadora Inflação</div>
+        </div>
+
+        <!-- Tab Content Area -->
+        <div>
+            <!-- Tab 1: Comparador -->
+            <div id="comparador" class="tab-content active">
+                <h2 class="text-2xl font-semibold text-gray-700 mb-6 text-center">Comparar Investimentos de Renda Fixa</h2>
+
+                <div class="reference-rates mb-6 p-4 bg-gray-50 rounded border border-gray-200">
+                     <h3 class="text-lg font-medium text-gray-600 mb-3 col-span-1 md:col-span-3">Taxas de Referência (Anuais)</h3>
+                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                         <div>
+                            <label for="ref-cdi" class="block text-sm font-medium text-gray-700 mb-1">CDI (%):</label>
+                            <input type="number" id="ref-cdi" value="10.50" step="0.01" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        </div>
+                        <div>
+                            <label for="ref-ipca" class="block text-sm font-medium text-gray-700 mb-1">IPCA (%): <span class="text-xs text-gray-500">(Inflação)</span></label>
+                            <input type="number" id="ref-ipca" value="3.80" step="0.01" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        </div>
+                         <div>
+                            <label for="ref-selic" class="block text-sm font-medium text-gray-700 mb-1">SELIC (%):</label>
+                            <input type="number" id="ref-selic" value="10.50" step="0.01" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        </div>
+                    </div>
+                     <p class="text-xs text-gray-500 mt-3">Nota: A Taxa Selic é usada como base para o Tesouro Selic. O IPCA é usado para calcular a Rentabilidade Real.</p>
+                </div>
+
+                <button id="add-item-btn" class="mb-6 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 text-sm">
+                    + Adicionar Investimento
+                </button>
+
+                <div id="comparison-items-container" class="space-y-4 mb-6">
+                    <!-- Default Comparison Item -->
+                     <div class="comparison-item p-4 bg-white rounded border border-gray-200 shadow-sm relative">
+                         <button class="remove-item-btn absolute top-2 right-2 text-red-500 hover:text-red-700 text-xl font-bold leading-none" onclick="removeItem(this)">×</button>
+                         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                             <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Nome:</label>
+                                <input type="text" class="comp-nome mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="Ex: CDB Banco X">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Tipo:</label>
+                                <select class="comp-tipo mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                    <option value="CDB_CDI">CDB (% CDI)</option>
+                                    <option value="CDB_PRE">CDB (Prefixado)</option>
+                                    <option value="LCI_LCA_CDI">LCI/LCA (% CDI)</option>
+                                    <option value="LCI_LCA_PRE">LCI/LCA (Prefixado)</option>
+                                     <option value="TESOURO_SELIC">Tesouro Selic</option>
+                                     <option value="TESOURO_PRE">Tesouro Prefixado</option>
+                                     <option value="TESOURO_IPCA">Tesouro IPCA+</option>
+                                     <option value="ALUGUEL">Aluguel (Líquido Est.)</option>
+                                    <option value="OUTRO">Outro (Tributável)</option>
+                                     <option value="OUTRO_ISENTO">Outro (Isento)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Rentabilidade (%):</label>
+                                <input type="number" class="comp-taxa mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" step="0.01" placeholder="Ex: 110, 12, 6">
+                            </div>
+                             <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Prazo (dias): <span class="text-xs text-gray-500">(p/ IR)</span></label>
+                                <input type="number" class="comp-prazo mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="Ex: 720" value="730">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="compare-btn" class="w-full md:w-auto px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 font-medium">
+                    Comparar Investimentos
+                </button>
+                <p class="text-xs text-gray-500 mt-2">Lembre-se: Este comparador simplifica alguns aspectos (ex: não inclui taxa B3 0.20% a.a. do Tesouro, IOF para < 30 dias). Rentabilidade passada não garante futura.</p>
+
+
+                <div id="comparison-results-container" class="results-container mt-8">
+                    <h3 class="text-xl font-semibold text-gray-700 mb-4">Resultados da Comparação <span class="text-sm font-normal text-gray-500">(Ordenado por Rentab. Líquida)</span></h3>
+                    <div class="overflow-x-auto shadow rounded-lg">
+                        <table id="comparison-results-table" class="min-w-full border-collapse border border-gray-200 bg-white">
+                            <thead class="bg-gray-100">
+                                <tr>
+                                    <th class="border-b border-gray-200 px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nome</th>
+                                    <th class="border-b border-gray-200 px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Tipo</th>
+                                    <th class="border-b border-gray-200 px-3 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Rentab. Bruta Anual (%)</th>
+                                    <th class="border-b border-gray-200 px-3 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">IR (%)</th>
+                                    <th class="border-b border-gray-200 px-3 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Rentab. Líquida Anual (%)</th>
+                                    <th class="border-b border-gray-200 px-3 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Rentab. Real Anual (%) <span class="text-xxs normal-case">(vs IPCA)</span></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Resultados serão inseridos aqui -->
+                            </tbody>
+                        </table>
+                    </div>
+                     <p class="text-xs text-gray-500 mt-2">Rentabilidade Real = Ganho acima da inflação (IPCA informado). Valores negativos indicam perda de poder de compra.</p>
+                    <div id="comparison-error" class="error text-red-600 font-semibold mt-4"></div>
+                </div>
+            </div>
+
+            <!-- Tab 2: Projetor -->
+            <div id="projetor" class="tab-content">
+                <h2 class="text-2xl font-semibold text-gray-700 mb-6 text-center">Projetor de Rendimentos</h2>
+
+                <div class="projection-inputs mb-6 p-4 bg-gray-50 rounded border border-gray-200">
+                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                         <div>
+                            <label for="proj-inicial" class="block text-sm font-medium text-gray-700 mb-1">Valor Inicial (R$):</label>
+                            <input type="number" id="proj-inicial" value="1000" step="100" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        </div>
+                        <div>
+                            <label for="proj-aporte" class="block text-sm font-medium text-gray-700 mb-1">Aporte Mensal (R$):</label>
+                            <input type="number" id="proj-aporte" value="200" step="50" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        </div>
+                         <div>
+                            <label for="proj-taxa-anual" class="block text-sm font-medium text-gray-700 mb-1">Taxa Líquida Anual (%):</label>
+                            <input type="number" id="proj-taxa-anual" value="10" step="0.1" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        </div>
+                         <div>
+                            <label for="proj-periodo" class="block text-sm font-medium text-gray-700 mb-1">Período (Anos):</label>
+                            <input type="number" id="proj-periodo" value="5" step="1" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        </div>
+                         <div>
+                            <label for="proj-inflacao-anual" class="block text-sm font-medium text-gray-700 mb-1">Inflação Anual Exp. (%):</label>
+                            <input type="number" id="proj-inflacao-anual" value="3.80" step="0.1" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        </div>
+                    </div>
+                     <p class="text-xs text-gray-500 mt-3">Use a taxa de juros líquida (após IR). A inflação é usada para estimar o valor real final.</p>
+                </div>
+
+                <button id="calculate-projection-btn" class="w-full md:w-auto px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 font-medium">
+                    Calcular Projeção
+                </button>
+                <p class="text-xs text-gray-500 mt-2">Projeções são estimativas e dependem da constância das taxas informadas.</p>
+
+                 <div id="projection-results-container" class="results-container mt-8">
+                    <h3 class="text-xl font-semibold text-gray-700 mb-4">Projeção de Patrimônio</h3>
+                    <!-- Tabela com scroll e sticky header -->
+                    <div class="max-h-80 overflow-y-auto mb-6 border border-gray-200 rounded shadow custom-scrollbar">
+                        <table id="projection-table" class="min-w-full border-collapse bg-white">
+                            <thead class="bg-gray-100 sticky top-0 z-10">
+                                <tr>
+                                    <th class="border-b border-gray-200 px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Mês</th>
+                                    <th class="border-b border-gray-200 px-3 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Total Aportado (R$)</th>
+                                    <th class="border-b border-gray-200 px-3 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Juros no Mês (R$)</th>
+                                    <th class="border-b border-gray-200 px-3 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Saldo Total (R$)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Dados da projeção aqui -->
+                            </tbody>
+                        </table>
+                    </div>
+                     <!-- Container do Gráfico -->
+                    <div id="projectionChartContainer">
+                        <canvas id="projectionChart"></canvas>
+                    </div>
+                     <!-- Resumo da Projeção -->
+                     <div id="projection-summary" class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                         <h4 class="text-lg font-semibold text-blue-800 mb-3">Resumo da Projeção</h4>
+                         <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                             <p><strong>Valor Inicial:</strong> <span id="summary-inicial" class="float-right">R$ 0,00</span></p>
+                             <p><strong>Total Aportado (sem inicial):</strong> <span id="summary-aportes" class="float-right">R$ 0,00</span></p>
+                             <p><strong>Total Juros Gerados:</strong> <span id="summary-juros" class="float-right">R$ 0,00</span></p>
+                             <p class="md:col-span-2 border-t pt-2 mt-2 border-blue-200"></p>
+                             <p class="font-semibold">Valor Final Nominal: <span id="summary-final-nominal" class="float-right font-bold">R$ 0,00</span></p>
+                             <p class="font-semibold">Valor Final Real Estimado <span class="text-xs">(em R$ de hoje):</span> <span id="summary-final-real" class="float-right font-bold">R$ 0,00</span></p>
+                         </div>
+                         <p class="text-xs text-gray-500 mt-3">Valor Real considera a inflação anual esperada informada.</p>
+                     </div>
+
+                    <div id="projection-error" class="error text-red-600 font-semibold mt-4"></div>
+                </div>
+            </div>
+
+            <!-- Tab 3: Calculadora de Inflação -->
+            <div id="inflacao" class="tab-content">
+                 <h2 class="text-2xl font-semibold text-gray-700 mb-6 text-center">Calculadora de Inflação</h2>
+                 <p class="text-center text-gray-600 mb-6 text-sm">Entenda como a inflação afeta o poder de compra do seu dinheiro ao longo do tempo.</p>
+
+                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                     <!-- Calculadora: Valor Futuro Equivalente -->
+                     <div class="p-4 bg-gray-50 rounded border border-gray-200">
+                         <h3 class="text-lg font-medium text-gray-700 mb-3">Valor Futuro Equivalente</h3>
+                         <p class="text-sm text-gray-600 mb-4">Quanto um valor de hoje precisará ser no futuro para manter o mesmo poder de compra?</p>
+                         <div>
+                            <label for="infl-valor-atual" class="block text-sm font-medium text-gray-700 mb-1">Valor Atual (R$):</label>
+                            <input type="number" id="infl-valor-atual" value="1000" step="100" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                         </div>
+                         <div class="mt-3">
+                            <label for="infl-taxa-futuro" class="block text-sm font-medium text-gray-700 mb-1">Taxa de Inflação Anual (%):</label>
+                            <input type="number" id="infl-taxa-futuro" value="4" step="0.1" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                         </div>
+                         <div class="mt-3">
+                            <label for="infl-periodo-futuro" class="block text-sm font-medium text-gray-700 mb-1">Período (Anos):</label>
+                            <input type="number" id="infl-periodo-futuro" value="10" step="1" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                         </div>
+                         <button id="calc-infl-futuro-btn" class="mt-4 w-full px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 text-sm font-medium">Calcular Valor Futuro</button>
+                         <div id="infl-result-futuro" class="mt-4 text-center font-semibold text-indigo-800"></div>
+                         <div id="infl-error-futuro" class="text-red-600 text-sm mt-2"></div>
+                     </div>
+
+                     <!-- Calculadora: Valor Presente Equivalente -->
+                     <div class="p-4 bg-gray-50 rounded border border-gray-200">
+                         <h3 class="text-lg font-medium text-gray-700 mb-3">Valor Presente Equivalente</h3>
+                         <p class="text-sm text-gray-600 mb-4">Quanto um valor futuro (ex: meta de aposentadoria) equivale em poder de compra hoje?</p>
+                         <div>
+                            <label for="infl-valor-futuro" class="block text-sm font-medium text-gray-700 mb-1">Valor Futuro (R$):</label>
+                            <input type="number" id="infl-valor-futuro" value="500000" step="10000" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm">
+                         </div>
+                          <div class="mt-3">
+                            <label for="infl-taxa-presente" class="block text-sm font-medium text-gray-700 mb-1">Taxa de Inflação Anual (%):</label>
+                            <input type="number" id="infl-taxa-presente" value="4" step="0.1" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm">
+                         </div>
+                         <div class="mt-3">
+                            <label for="infl-periodo-presente" class="block text-sm font-medium text-gray-700 mb-1">Período (Anos):</label>
+                            <input type="number" id="infl-periodo-presente" value="20" step="1" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm">
+                         </div>
+                         <button id="calc-infl-presente-btn" class="mt-4 w-full px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 text-sm font-medium">Calcular Valor Presente</button>
+                         <div id="infl-result-presente" class="mt-4 text-center font-semibold text-purple-800"></div>
+                         <div id="infl-error-presente" class="text-red-600 text-sm mt-2"></div>
+                     </div>
+                 </div>
+            </div> <!-- Fim Tab Inflação -->
+
+        </div> <!-- Fim da Tab Content Area -->
+
+         <!-- Footer Disclaimer -->
+        <div class="mt-12 pt-6 border-t border-gray-200 text-center text-xs text-gray-500">
+            <p><strong>Aviso:</strong> Esta ferramenta é para fins educacionais e de simulação. Os cálculos são aproximações e não consideram todas as taxas (ex: taxa de custódia B3 sobre Tesouro Direto acima de R$10k em Selic, IOF < 30 dias), custos operacionais ou a volatilidade de mercado para títulos marcados a mercado (Tesouro Prefixado/IPCA+ antes do vencimento). Rentabilidade passada não é garantia de rentabilidade futura.</p>
+            <p class="mt-2">Consulte um profissional de investimentos qualificado antes de tomar qualquer decisão. Diversifique seus investimentos para gerenciar riscos.</p>
+        </div>
+
+    </div> <!-- Fim do Container Principal -->
+
+    <script>
+        // --- Globals ---
+        let projectionChart = null; // Chart instance
+
+        // --- Tab Functionality ---
+        const tabLinks = document.querySelectorAll('.tab-link');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        tabLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                const tabId = link.getAttribute('data-tab');
+
+                tabLinks.forEach(l => l.classList.remove('active', 'border-blue-500', 'text-blue-600', 'font-semibold', 'bg-blue-50'));
+                tabContents.forEach(c => c.classList.remove('active'));
+
+                link.classList.add('active', 'border-blue-500', 'text-blue-600', 'font-semibold', 'bg-blue-50');
+                const contentToShow = document.getElementById(tabId);
+                if (contentToShow) {
+                    contentToShow.classList.add('active');
+                }
+                // Potentially resize chart if its tab becomes active after initial load
+                if (tabId === 'projetor' && projectionChart) {
+                   // projectionChart.resize(); // May not be needed with maintainAspectRatio: false
+                }
+            });
+        });
+
+        // --- Helper Functions ---
+        function formatCurrency(value) {
+            if (typeof value !== 'number' || isNaN(value)) return 'R$ -';
+            return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+
+        function formatPercentage(value, decimals = 2) {
+             if (typeof value !== 'number' || isNaN(value)) return '- %';
+            return (value * 100).toFixed(decimals).replace('.', ',') + '%';
+        }
+
+        function parseInputNumber(elementId, allowNegative = false) {
+            const element = document.getElementById(elementId);
+            if (!element) return null;
+            const value = element.value.trim();
+             if (value === '') return null; // Treat empty as invalid for calculations
+            const num = parseFloat(value.replace(',', '.'));
+            if (isNaN(num) || (!allowNegative && num < 0)) {
+                return null; // Indicate invalid input
+            }
+            return num;
+        }
+
+        function parseElementNumber(element, allowNegative = false) {
+            if (!element) return null;
+            const value = element.value.trim();
+            if (value === '') return null;
+            const num = parseFloat(value.replace(',', '.'));
+            if (isNaN(num) || (!allowNegative && num < 0)) {
+                return null;
+            }
+            return num;
+        }
+
+         // Function to remove comparison item
+        function removeItem(button) {
+            button.closest('.comparison-item').remove();
+             // Optionally recalculate: compareBtn.click();
+        }
+
+        // --- Comparador Tab Logic ---
+        const addItemBtn = document.getElementById('add-item-btn');
+        const comparisonItemsContainer = document.getElementById('comparison-items-container');
+        const compareBtn = document.getElementById('compare-btn');
+        const comparisonResultsTableBody = document.getElementById('comparison-results-table').querySelector('tbody');
+        const comparisonErrorDiv = document.getElementById('comparison-error');
+
+        function createComparisonItemHTML() {
+            const div = document.createElement('div');
+            div.className = 'comparison-item p-4 bg-white rounded border border-gray-200 shadow-sm relative mt-4';
+            div.innerHTML = `
+                <button class="remove-item-btn absolute top-2 right-2 text-red-500 hover:text-red-700 text-xl font-bold leading-none" onclick="removeItem(this)">×</button>
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                     <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Nome:</label>
+                        <input type="text" class="comp-nome mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="Ex: LCI Banco Y">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Tipo:</label>
+                        <select class="comp-tipo mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            <option value="CDB_CDI">CDB (% CDI)</option>
+                            <option value="CDB_PRE">CDB (Prefixado)</option>
+                            <option value="LCI_LCA_CDI">LCI/LCA (% CDI)</option>
+                            <option value="LCI_LCA_PRE">LCI/LCA (Prefixado)</option>
+                            <option value="TESOURO_SELIC">Tesouro Selic</option>
+                            <option value="TESOURO_PRE">Tesouro Prefixado</option>
+                            <option value="TESOURO_IPCA">Tesouro IPCA+</option>
+                            <option value="ALUGUEL">Aluguel (Líquido Est.)</option>
+                            <option value="OUTRO">Outro (Tributável)</option>
+                            <option value="OUTRO_ISENTO">Outro (Isento)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Rentabilidade (%):</label>
+                        <input type="number" class="comp-taxa mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" step="0.01" placeholder="Ex: 110, 12, 6">
+                    </div>
+                    <div>
+                         <label class="block text-sm font-medium text-gray-700 mb-1">Prazo (dias): <span class="text-xs text-gray-500">(p/ IR)</span></label>
+                        <input type="number" class="comp-prazo mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="Ex: 720" value="730">
+                    </div>
+                </div>
+            `;
+            return div;
+        }
+
+        if (addItemBtn) {
+             addItemBtn.addEventListener('click', () => {
+                comparisonItemsContainer.appendChild(createComparisonItemHTML());
+            });
+        }
+
+
+        function calculateIR(days) {
+            if (days === null || days < 0) return 0.225; // Default to highest rate if invalid
+            if (days <= 180) return 0.225;
+            if (days <= 360) return 0.20;
+            if (days <= 720) return 0.175;
+            return 0.15;
+        }
+
+         if (compareBtn) {
+            compareBtn.addEventListener('click', () => {
+                comparisonResultsTableBody.innerHTML = '';
+                comparisonErrorDiv.textContent = '';
+                let hasErrors = false;
+
+                comparisonItemsContainer.querySelectorAll('.comparison-item').forEach(item => {
+                    item.classList.remove('border-red-500'); item.classList.add('border-gray-200');
+                });
+
+                const cdiRate = parseInputNumber('ref-cdi') / 100;
+                const ipcaRate = parseInputNumber('ref-ipca') / 100; // Used for Real Return
+                const selicRate = parseInputNumber('ref-selic') / 100;
+
+                if (cdiRate === null || ipcaRate === null || selicRate === null || cdiRate < 0 || ipcaRate < 0 || selicRate < 0) {
+                    comparisonErrorDiv.textContent = 'Erro: Verifique as taxas de referência (CDI, IPCA, SELIC). Devem ser números positivos válidos.';
+                    return;
+                }
+
+                const items = comparisonItemsContainer.querySelectorAll('.comparison-item');
+                if (items.length === 0) {
+                    comparisonErrorDiv.textContent = 'Adicione pelo menos um investimento para comparar.';
+                    return;
+                }
+
+                const results = [];
+
+                items.forEach((item, index) => {
+                    const nomeInput = item.querySelector('.comp-nome');
+                    const tipoSelect = item.querySelector('.comp-tipo');
+                    const taxaInput = item.querySelector('.comp-taxa');
+                    const prazoInput = item.querySelector('.comp-prazo');
+
+                    const nome = nomeInput.value.trim() || `Investimento ${index + 1}`;
+                    const tipo = tipoSelect.value;
+                    const taxa = parseElementNumber(taxaInput);
+                    const prazo = parseElementNumber(prazoInput, false); // Allow 0 days, but not negative
+
+                    if (taxa === null || prazo === null || prazo < 0) {
+                        comparisonErrorDiv.textContent += `Erro no ${nome}: Taxa e Prazo devem ser números válidos (prazo >= 0).\n`;
+                        hasErrors = true;
+                        item.classList.remove('border-gray-200'); item.classList.add('border-red-500');
+                        return;
+                    }
+
+                    let grossAnnualRate = 0;
+                    let isTaxExempt = false;
+                    let irRateValue = 0;
+                    let irRateDisplay = '0,00%';
+                    let requiresIrCalculation = true;
+
+                    // --- Calculate Gross Annual Rate ---
+                    switch (tipo) {
+                        case 'CDB_CDI': case 'OUTRO': grossAnnualRate = cdiRate * (taxa / 100); break;
+                        case 'CDB_PRE': grossAnnualRate = taxa / 100; break;
+                        case 'LCI_LCA_CDI': case 'OUTRO_ISENTO': grossAnnualRate = cdiRate * (taxa / 100); isTaxExempt = true; break;
+                        case 'LCI_LCA_PRE': grossAnnualRate = taxa / 100; isTaxExempt = true; break;
+                        case 'TESOURO_SELIC': grossAnnualRate = selicRate; break; // Simplification
+                        case 'TESOURO_PRE': grossAnnualRate = taxa / 100; break;
+                        case 'TESOURO_IPCA': grossAnnualRate = (1 + ipcaRate) * (1 + taxa / 100) - 1; break;
+                        case 'ALUGUEL':
+                            grossAnnualRate = taxa / 100; // Assume input rate is ALREADY NET annual rate
+                            isTaxExempt = false; requiresIrCalculation = false;
+                            irRateDisplay = 'N/A (Líq.)'; // Mark as net input
+                            break;
+                        default: grossAnnualRate = taxa / 100; break;
+                    }
+
+                    // --- Calculate Net Annual Rate ---
+                    let netAnnualRate = grossAnnualRate;
+                    if (!isTaxExempt && requiresIrCalculation) {
+                        irRateValue = calculateIR(prazo);
+                        netAnnualRate = grossAnnualRate * (1 - irRateValue);
+                        irRateDisplay = formatPercentage(irRateValue);
+                    } else if (isTaxExempt) {
+                        irRateValue = 0; irRateDisplay = '0,00%';
+                    }
+                    // For 'ALUGUEL', netAnnualRate remains as input grossAnnualRate, irRateDisplay is 'N/A (Líq.)'
+
+                    // --- Calculate Real Annual Rate ---
+                    let realAnnualRate = NaN; // Use NaN for invalid cases initially
+                    if (ipcaRate !== null && netAnnualRate !== null && (1 + ipcaRate) !== 0) {
+                         realAnnualRate = ((1 + netAnnualRate) / (1 + ipcaRate)) - 1;
+                    }
+
+
+                    results.push({
+                        nome: nome,
+                        tipoDisplay: tipoSelect.options[tipoSelect.selectedIndex].text,
+                        grossAnnualRate: grossAnnualRate,
+                        irRateDisplay: irRateDisplay,
+                        netAnnualRate: netAnnualRate,
+                        realAnnualRate: realAnnualRate
+                    });
+                });
+
+                if (hasErrors) {
+                    comparisonErrorDiv.textContent = 'Alguns itens contêm erros (marcados em vermelho). Verifique os valores de Taxa e Prazo (>= 0).';
+                }
+
+                // Sort results by net annual rate (descending)
+                results.sort((a, b) => (b.netAnnualRate ?? -Infinity) - (a.netAnnualRate ?? -Infinity));
+
+                // Populate table with sorted results
+                results.forEach((result, index) => {
+                    const row = comparisonResultsTableBody.insertRow();
+                    row.innerHTML = `
+                        <td class="border-b border-gray-200 px-3 py-2 text-sm">${result.nome}</td>
+                        <td class="border-b border-gray-200 px-3 py-2 text-sm">${result.tipoDisplay}</td>
+                        <td class="border-b border-gray-200 px-3 py-2 text-sm text-right">${formatPercentage(result.grossAnnualRate)}</td>
+                        <td class="border-b border-gray-200 px-3 py-2 text-sm text-right">${result.irRateDisplay}</td>
+                        <td class="border-b border-gray-200 px-3 py-2 text-sm text-right font-semibold">${formatPercentage(result.netAnnualRate)}</td>
+                         <td class="border-b border-gray-200 px-3 py-2 text-sm text-right ${result.realAnnualRate < 0 ? 'text-red-600' : 'text-green-700'}">${formatPercentage(result.realAnnualRate)}</td>
+                    `;
+                    // Highlight the best result row (first row after sorting)
+                    if (index === 0 && !hasErrors && results.length > 0) {
+                        row.classList.add('highlight-best');
+                    }
+                });
+            });
+        }
+
+
+        // --- Projetor Tab Logic ---
+        const calculateProjectionBtn = document.getElementById('calculate-projection-btn');
+        const projectionTableBody = document.getElementById('projection-table').querySelector('tbody');
+        const projectionErrorDiv = document.getElementById('projection-error');
+        const projectionChartCanvas = document.getElementById('projectionChart');
+
+        // Summary elements
+        const summaryInicialEl = document.getElementById('summary-inicial');
+        const summaryAportesEl = document.getElementById('summary-aportes');
+        const summaryJurosEl = document.getElementById('summary-juros');
+        const summaryFinalNominalEl = document.getElementById('summary-final-nominal');
+        const summaryFinalRealEl = document.getElementById('summary-final-real');
+
+
+        if (calculateProjectionBtn) {
+            calculateProjectionBtn.addEventListener('click', () => {
+                projectionTableBody.innerHTML = ''; // Clear table
+                projectionErrorDiv.textContent = ''; // Clear errors
+                if (projectionChart) {
+                    projectionChart.destroy();
+                    projectionChart = null;
+                }
+                // Clear summary
+                summaryInicialEl.textContent = formatCurrency(0);
+                summaryAportesEl.textContent = formatCurrency(0);
+                summaryJurosEl.textContent = formatCurrency(0);
+                summaryFinalNominalEl.textContent = formatCurrency(0);
+                summaryFinalRealEl.textContent = formatCurrency(0);
+
+
+                const valorInicial = parseInputNumber('proj-inicial', false); // No negative initial
+                const aporteMensal = parseInputNumber('proj-aporte', false); // No negative aportes
+                const taxaAnualLiquida = parseInputNumber('proj-taxa-anual'); // Can be negative theoretically
+                const periodoAnos = parseInputNumber('proj-periodo', false); // No negative years
+                const projInflacaoAnual = parseInputNumber('proj-inflacao-anual'); // Allow negative inflation? Yes.
+
+                if (valorInicial === null || aporteMensal === null || taxaAnualLiquida === null || periodoAnos === null || periodoAnos <= 0 || projInflacaoAnual === null) {
+                    projectionErrorDiv.textContent = 'Erro: Todos os campos da projeção devem ser números válidos (Valor Inicial >= 0, Aporte >= 0, Período > 0).';
+                    return;
+                }
+
+                const taxaMensal = Math.pow(1 + taxaAnualLiquida / 100, 1 / 12) - 1;
+                const taxaInflacaoMensal = Math.pow(1 + projInflacaoAnual / 100, 1 / 12) - 1;
+                const totalMeses = Math.round(periodoAnos * 12);
+
+                let saldoAtual = valorInicial;
+                let totalAportadoAcumulado = valorInicial; // Includes initial amount
+                let totalJurosAcumulado = 0;
+
+                const labels = ['Mês 0'];
+                const totalAportadoData = [totalAportadoAcumulado];
+                const saldoTotalData = [saldoAtual];
+
+                // Add initial row to table
+                const initialRow = projectionTableBody.insertRow();
+                initialRow.innerHTML = `
+                    <td class="border-b border-gray-200 px-3 py-2 text-sm">0</td>
+                    <td class="border-b border-gray-200 px-3 py-2 text-sm text-right">${formatCurrency(totalAportadoAcumulado)}</td>
+                    <td class="border-b border-gray-200 px-3 py-2 text-sm text-right">${formatCurrency(0)}</td>
+                    <td class="border-b border-gray-200 px-3 py-2 text-sm text-right">${formatCurrency(saldoAtual)}</td>
+                `;
+
+                for (let mes = 1; mes <= totalMeses; mes++) {
+                    const jurosMes = saldoAtual * taxaMensal;
+                    saldoAtual += jurosMes + aporteMensal;
+                    totalAportadoAcumulado += aporteMensal;
+                    totalJurosAcumulado += jurosMes;
+
+                    // Add row to table
+                    const row = projectionTableBody.insertRow();
+                    row.innerHTML = `
+                        <td class="border-b border-gray-200 px-3 py-2 text-sm">${mes}</td>
+                        <td class="border-b border-gray-200 px-3 py-2 text-sm text-right">${formatCurrency(totalAportadoAcumulado)}</td>
+                        <td class="border-b border-gray-200 px-3 py-2 text-sm text-right">${formatCurrency(jurosMes)}</td>
+                        <td class="border-b border-gray-200 px-3 py-2 text-sm text-right">${formatCurrency(saldoAtual)}</td>
+                    `;
+
+                    labels.push(`Mês ${mes}`);
+                    totalAportadoData.push(totalAportadoAcumulado);
+                    saldoTotalData.push(saldoAtual);
+                }
+
+                // Calculate final real value
+                 const fatorInflacaoTotal = Math.pow(1 + projInflacaoAnual / 100, periodoAnos);
+                 const valorFinalReal = saldoAtual / fatorInflacaoTotal;
+
+                 // Update Summary
+                 summaryInicialEl.textContent = formatCurrency(valorInicial);
+                 summaryAportesEl.textContent = formatCurrency(totalAportadoAcumulado - valorInicial); // Only the aportes
+                 summaryJurosEl.textContent = formatCurrency(totalJurosAcumulado);
+                 summaryFinalNominalEl.textContent = formatCurrency(saldoAtual);
+                 summaryFinalRealEl.textContent = formatCurrency(valorFinalReal);
+
+
+                // Create Chart
+                const ctx = projectionChartCanvas.getContext('2d');
+                 if (!ctx) {
+                    projectionErrorDiv.textContent = 'Erro ao obter o contexto do canvas para o gráfico.';
+                    return;
+                }
+
+                projectionChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Total Aportado (Inicial + Aportes)',
+                                data: totalAportadoData,
+                                borderColor: 'rgb(239, 68, 68)', // red-500
+                                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                                borderWidth: 2, tension: 0.1, pointRadius: 0, pointHoverRadius: 5
+                            },
+                            {
+                                label: 'Saldo Total (Aportes + Juros)',
+                                data: saldoTotalData,
+                                borderColor: 'rgb(59, 130, 246)', // blue-500
+                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                borderWidth: 2, tension: 0.1, pointRadius: 0, pointHoverRadius: 5, fill: true
+                            }
+                        ]
+                    },
+                    options: { /* Options from previous version - unchanged */
+                         responsive: true, maintainAspectRatio: false,
+                         plugins: { title: { display: true, text: 'Evolução do Patrimônio ao Longo do Tempo', font: { size: 16 } },
+                            tooltip: { mode: 'index', intersect: false, callbacks: { label: context => `${context.dataset.label || ''}: ${formatCurrency(context.parsed.y)}` } }
+                         },
+                         interaction: { mode: 'nearest', axis: 'x', intersect: false },
+                         scales: {
+                            y: { beginAtZero: true, ticks: { callback: value => { if (value >= 1e6) return formatCurrency(value / 1e6) + 'M'; if (value >= 1e3) return formatCurrency(value / 1e3) + 'k'; return formatCurrency(value); } } },
+                            x: { ticks: { autoSkip: true, maxTicksLimit: 15 } }
+                        }
+                    } // End options
+                });
+            });
+        }
+
+
+        // --- Inflation Calculator Logic ---
+        const calcInflFuturoBtn = document.getElementById('calc-infl-futuro-btn');
+        const calcInflPresenteBtn = document.getElementById('calc-infl-presente-btn');
+        const inflResultFuturo = document.getElementById('infl-result-futuro');
+        const inflResultPresente = document.getElementById('infl-result-presente');
+        const inflErrorFuturo = document.getElementById('infl-error-futuro');
+        const inflErrorPresente = document.getElementById('infl-error-presente');
+
+
+        if (calcInflFuturoBtn) {
+            calcInflFuturoBtn.addEventListener('click', () => {
+                inflResultFuturo.textContent = '';
+                inflErrorFuturo.textContent = '';
+                const valorAtual = parseInputNumber('infl-valor-atual', false);
+                const taxa = parseInputNumber('infl-taxa-futuro'); // Allow negative inflation
+                const periodo = parseInputNumber('infl-periodo-futuro', false);
+
+                if (valorAtual === null || taxa === null || periodo === null || periodo < 0) {
+                    inflErrorFuturo.textContent = 'Valores inválidos. Verifique os campos (Valor >=0, Período >= 0).';
+                    return;
+                }
+
+                const valorFuturo = valorAtual * Math.pow(1 + taxa / 100, periodo);
+                inflResultFuturo.innerHTML = `Valor futuro equivalente: <strong class="text-lg">${formatCurrency(valorFuturo)}</strong>`;
+            });
+        }
+
+        if (calcInflPresenteBtn) {
+             calcInflPresenteBtn.addEventListener('click', () => {
+                inflResultPresente.textContent = '';
+                inflErrorPresente.textContent = '';
+                 const valorFuturo = parseInputNumber('infl-valor-futuro', false);
+                 const taxa = parseInputNumber('infl-taxa-presente');
+                 const periodo = parseInputNumber('infl-periodo-presente', false);
+
+                 if (valorFuturo === null || taxa === null || periodo === null || periodo < 0) {
+                    inflErrorPresente.textContent = 'Valores inválidos. Verifique os campos (Valor >=0, Período >= 0).';
+                    return;
+                 }
+                 if (1 + taxa / 100 <= 0) { // Avoid division by zero or negative base for power if inflation is <= -100%
+                     inflErrorPresente.textContent = 'Taxa de inflação inválida para cálculo de valor presente.';
+                     return;
+                 }
+
+                 const valorPresente = valorFuturo / Math.pow(1 + taxa / 100, periodo);
+                 inflResultPresente.innerHTML = `Valor presente equivalente: <strong class="text-lg">${formatCurrency(valorPresente)}</strong>`;
+             });
+        }
+
+
+        // --- Initial Setup ---
+        // Set first tab active on load (redundant if HTML has 'active' class, but safe)
+        // document.querySelector('.tab-link')?.classList.add('active', 'border-blue-500', 'text-blue-600', 'font-semibold');
+        // document.querySelector('.tab-content')?.classList.add('active');
+
+         // Optional: Trigger initial calculation for projector on page load
+         // document.addEventListener('DOMContentLoaded', () => {
+         //    if(calculateProjectionBtn) calculateProjectionBtn.click();
+         // });
+
+    </script>
+</body>
+</html>
